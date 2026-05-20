@@ -1,0 +1,10 @@
+# Reference software - not part of this project
+source/
+docs/
+ref_software/
+
+# Squad workspace
+
+
+# Claude文件
+CLAUDE.md

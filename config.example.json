@@ -1,0 +1,54 @@
+{
+  "bridge": {
+    "http_addr": ":8080",
+    "poll_interval_ms": 5000,
+    "health_check_interval_sec": 30,
+    "task_timeout_min": 30,
+    "enable_rc": false,
+    "rc_server_url": "",
+    "stream_mode": "text"
+  },
+  "lark": {
+    "app_id": "cli_xxxxxxxxxxxxxxxx",
+    "app_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "encrypt_key": "",
+    "identity_mode": "bot",
+    "event_keys": ["im.message.receive_v1"],
+    "auto_reply": true,
+    "card_update_mode": "edit"
+  },
+  "squad": {
+    "workspace": "C:/Users/yourname/squad-workspace",
+    "bridge_agent_id": "bridge",
+    "bridge_role": "bridge",
+    "protocol_version": 2,
+    "agents": ["manager", "worker", "inspector"],
+    "default_agent": "manager",
+    "projects": {
+      "project-a": {
+        "workspace": "C:/Users/yourname/projects/project-a/.squad",
+        "workdir": "C:/Users/yourname/projects/project-a",
+        "agents": ["manager", "worker"]
+      },
+      "project-b": {
+        "workdir": "C:/Users/yourname/projects/project-b"
+      }
+    }
+  },
+  "tmux": {
+    "session_prefix": "squad",
+    "auto_recover": true,
+    "capture_interval_sec": 60
+  },
+  "security": {
+    "output_filter": true,
+    "audit_log_path": "./logs/audit.log",
+    "max_task_timeout_min": 30,
+    "dangerous_commands": ["rm -rf /", "sudo", "DROP TABLE"]
+  },
+  "log": {
+    "level": "info",
+    "format": "json",
+    "output_path": "./logs/bridge.log"
+  }
+}
