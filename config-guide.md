@@ -34,6 +34,24 @@ Bridge 通过 JSON 配置文件启动，默认读取 `config.json`（可通过 `
     "auto_reply": true,
     "card_update_mode": "edit"
   },
+  "weixin": {
+    "enabled": false,
+    "base_url": "https://ilinkai.weixin.qq.com",
+    "bot_token": "",
+    "auto_reply": true,
+    "poll_interval_ms": 5000,
+    "long_poll_timeout_ms": 35000
+  },
+  "wecom": {
+    "enabled": false,
+    "corp_id": "",
+    "corp_secret": "",
+    "agent_id": "",
+    "token": "",
+    "encoding_aes_key": "",
+    "callback_path": "/wecom/callback",
+    "auto_reply": true
+  },
   "squad": {
     "workspace": "C:/Users/yourname/squad-workspace",
     "bridge_agent_id": "bridge",
@@ -95,8 +113,8 @@ Bridge 通过 JSON 配置文件启动，默认读取 `config.json`（可通过 `
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `app_id` | string | `""` | 飞书应用 ID（必填） |
-| `app_secret` | string | `""` | 飞书应用 Secret（必填） |
+| `app_id` | string | `""` | 飞书应用 ID |
+| `app_secret` | string | `""` | 飞书应用 Secret |
 | `encrypt_key` | string | `""` | 事件加密密钥（可选，开启事件加密时填写） |
 | `identity_mode` | string | `bot` | 身份模式：`bot`（机器人）或 `user`（用户） |
 | `event_keys` | []string | `["im.message.receive_v1"]` | 订阅的事件类型 |
@@ -112,6 +130,59 @@ Bridge 通过 JSON 配置文件启动，默认读取 `config.json`（可通过 `
 - `LARK_APP_SECRET` → 覆盖 `app_secret`
 - `LARK_ENCRYPT_KEY` → 覆盖 `encrypt_key`
 - `LARK_IDENTITY_MODE` → 覆盖 `identity_mode`
+
+### `weixin` — 个人微信接入
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `enabled` | bool | false | 是否启用微信通道 |
+| `base_url` | string | `https://ilinkai.weixin.qq.com` | iLink 后端地址 |
+| `bot_token` | string | `""` | 扫码登录后获取的 bot_token（必填，启用时） |
+| `auto_reply` | bool | true | 是否自动回复 |
+| `poll_interval_ms` | int | 5000 | 长轮询间隔（毫秒） |
+| `long_poll_timeout_ms` | int | 35000 | 长轮询超时（毫秒） |
+
+**获取 `bot_token`：**
+
+方式一（交互式）：首次启动 Bridge 时选择 `[1] 个人微信`，按提示扫码即可自动获取。
+
+方式二（命令行）：
+```bash
+./bridge weixin-login
+# 或指定配置文件
+./bridge weixin-login -config=config.json
+```
+
+**环境变量覆盖：**
+- `WEIXIN_ENABLED` → 覆盖 `enabled`
+- `WEIXIN_BOT_TOKEN` → 覆盖 `bot_token`
+- `WEIXIN_BASE_URL` → 覆盖 `base_url`
+
+### `wecom` — 企业微信接入
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `enabled` | bool | false | 是否启用企微通道 |
+| `corp_id` | string | `""` | 企业 ID（必填，启用时） |
+| `corp_secret` | string | `""` | 应用 Secret（必填，启用时） |
+| `agent_id` | string | `""` | 应用 ID |
+| `token` | string | `""` | 回调验证 Token（必填，启用时） |
+| `encoding_aes_key` | string | `""` | 回调消息加密密钥，43 字符 base64（必填，启用时） |
+| `callback_path` | string | `/wecom/callback` | HTTP 回调路径 |
+| `auto_reply` | bool | true | 是否自动回复 |
+
+**获取方式：**
+- `corp_id`：企微管理后台「我的企业」页面
+- `corp_secret` / `agent_id`：在「应用管理」创建自建应用后获取
+- `token` / `encoding_aes_key`：在应用「接收消息」页面设置回调时生成
+
+**环境变量覆盖：**
+- `WECOM_ENABLED` → 覆盖 `enabled`
+- `WECOM_CORP_ID` → 覆盖 `corp_id`
+- `WECOM_CORP_SECRET` → 覆盖 `corp_secret`
+- `WECOM_AGENT_ID` → 覆盖 `agent_id`
+- `WECOM_TOKEN` → 覆盖 `token`
+- `WECOM_ENCODING_AES_KEY` → 覆盖 `encoding_aes_key`
 
 ### `squad` — Squad 协作网络
 
@@ -173,8 +244,8 @@ Bridge 通过 JSON 配置文件启动，默认读取 `config.json`（可通过 `
 - 自动匹配并替换 `sk-xxx`（OpenAI API Key）、`Bearer xxx`（Token）、内网 IP（`10.x.x.x`、`192.168.x.x`、`172.16-31.x.x`）
 
 **危险命令检测：**
-- 当 Agent 输出包含 `dangerous_commands` 中的关键字时，Bridge 会向飞书发送审批卡片
-- 用户点击「批准」后继续执行，点击「拒绝」则发送 `Ctrl+C` 中断对应 Agent 的 tmux session
+- 当 Agent 输出包含 `dangerous_commands` 中的关键字时，Bridge 会向 IM 发送审批请求
+- 用户回复 `/approve` 后继续执行，回复 `/reject` 则发送 `Ctrl+C` 中断对应 Agent 的 tmux session
 
 ### `log` — 日志
 
@@ -198,6 +269,15 @@ Bridge 通过 JSON 配置文件启动，默认读取 `config.json`（可通过 `
 | `LARK_APP_SECRET` | `lark.app_secret` | `xxx` |
 | `LARK_ENCRYPT_KEY` | `lark.encrypt_key` | `xxx` |
 | `LARK_IDENTITY_MODE` | `lark.identity_mode` | `bot` |
+| `WEIXIN_ENABLED` | `weixin.enabled` | `true` |
+| `WEIXIN_BOT_TOKEN` | `weixin.bot_token` | `xxx` |
+| `WEIXIN_BASE_URL` | `weixin.base_url` | `https://ilinkai.weixin.qq.com` |
+| `WECOM_ENABLED` | `wecom.enabled` | `true` |
+| `WECOM_CORP_ID` | `wecom.corp_id` | `ww_xxx` |
+| `WECOM_CORP_SECRET` | `wecom.corp_secret` | `xxx` |
+| `WECOM_AGENT_ID` | `wecom.agent_id` | `1000002` |
+| `WECOM_TOKEN` | `wecom.token` | `xxx` |
+| `WECOM_ENCODING_AES_KEY` | `wecom.encoding_aes_key` | `xxx` |
 | `SQUAD_WORKSPACE` | `squad.workspace` | `/home/user/squad` |
 | `BRIDGE_HTTP_ADDR` | `bridge.http_addr` | `:8080` |
 | `LOG_LEVEL` | `log.level` | `debug` |
@@ -212,22 +292,79 @@ Bridge 通过 JSON 配置文件启动，默认读取 `config.json`（可通过 `
 
 启动时 Bridge 会自动校验配置，以下情况会报错退出：
 
-1. `lark.app_id` 为空
-2. `lark.app_secret` 为空
-3. `squad.workspace` 为空
-4. `squad.workspace` 指向的目录不存在
+1. **至少一个 IM 通道**：飞书、微信、企微至少配置一个
+2. `squad.workspace` 为空
+3. `squad.workspace` 指向的目录不存在
+4. 微信启用时：`weixin.bot_token` 不能为空
+5. 企微启用时：`wecom.corp_id`、`wecom.corp_secret`、`wecom.token`、`wecom.encoding_aes_key` 均不能为空
 
 ---
 
 ## 最小可用配置
 
-如果只连接一个项目、使用默认参数，最小配置如下：
+### 仅微信
+
+```json
+{
+  "weixin": {
+    "enabled": true,
+    "bot_token": "your_bot_token"
+  },
+  "squad": {
+    "workspace": "C:/Users/yourname/squad-workspace"
+  }
+}
+```
+
+### 仅企微
+
+```json
+{
+  "wecom": {
+    "enabled": true,
+    "corp_id": "ww_xxx",
+    "corp_secret": "xxx",
+    "token": "xxx",
+    "encoding_aes_key": "xxx"
+  },
+  "squad": {
+    "workspace": "C:/Users/yourname/squad-workspace"
+  }
+}
+```
+
+### 仅飞书
 
 ```json
 {
   "lark": {
     "app_id": "cli_xxxxxxxxxxxxxxxx",
     "app_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  "squad": {
+    "workspace": "C:/Users/yourname/squad-workspace"
+  }
+}
+```
+
+### 多通道同时启用
+
+```json
+{
+  "lark": {
+    "app_id": "cli_xxx",
+    "app_secret": "xxx"
+  },
+  "weixin": {
+    "enabled": true,
+    "bot_token": "xxx"
+  },
+  "wecom": {
+    "enabled": true,
+    "corp_id": "ww_xxx",
+    "corp_secret": "xxx",
+    "token": "xxx",
+    "encoding_aes_key": "xxx"
   },
   "squad": {
     "workspace": "C:/Users/yourname/squad-workspace"

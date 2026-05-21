@@ -1,14 +1,15 @@
 # Mobile Squad Bridge
 
-通过手机飞书 App 以自然语言对话方式指挥本地 Claude Code Squad 多 Agent 协作工作。
+通过手机 IM 应用（飞书 / 个人微信 / 企业微信）以自然语言对话方式指挥本地 Claude Code Squad 多 Agent 协作工作。
 
 ## 核心能力
 
+- **多 IM 通道**：支持飞书、个人微信、企业微信，可同时启用多个
 - **实时对话**：与主 Agent（默认 manager）自然语言对话，流式返回思考过程
 - **随时切换**：发送 `/agent worker` 即可切换到其他 Agent 直接对话
-- **流式输出**：Agent 回复通过飞书消息编辑逐步展现，秒级延迟
+- **流式输出**：Agent 回复通过 IM 消息逐步展现，秒级延迟
 - **任务指派**：发送 `/task` 创建正式 squad 任务，支持生命周期追踪
-- **危险命令审批**：检测到 `rm -rf /`、`DROP TABLE` 等危险操作时发送审批卡片到飞书
+- **危险命令审批**：检测到 `rm -rf /`、`DROP TABLE` 等危险操作时发送审批请求
 - **多项目隔离**：不同代码库独立 workspace、独立 Agent 团队
 
 ## 前置依赖
@@ -16,8 +17,8 @@
 - [Go 1.23+](https://go.dev/dl/)（仅编译需要，运行不需要）
 - [squad](https://github.com/squad-sh/squad)（Rust CLI，多 Agent 协作）
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview)（`npm install -g @anthropic-ai/claude-code`）
-- [lark-cli](https://www.npmjs.com/package/@larksuite/cli)（`npm install -g @larksuite/cli`）
 - [tmux](https://github.com/tmux/tmux/wiki)（Windows 需 WSL2）
+- [lark-cli](https://www.npmjs.com/package/@larksuite/cli)（仅飞书通道需要，`npm install -g @larksuite/cli`）
 
 ## 快速开始
 
@@ -33,46 +34,51 @@
 | macOS Intel | `bin/bridge-darwin-amd64` |
 | macOS Apple Silicon | `bin/bridge-darwin-arm64` |
 
-### 2. 配置
+### 2. 启动（交互式配置）
 
-复制配置示例并填写你的飞书应用凭证：
+**首次启动**时如果没有配置任何 IM 通道，Bridge 会自动进入交互式向导：
+
+```bash
+./bin/bridge-linux-amd64
+```
+
+```
+========================================
+  未检测到任何 IM 通道配置
+========================================
+
+[1] 个人微信（扫码登录，最简单）
+[2] 企业微信
+[3] 飞书
+[q] 退出
+
+请选择: 1
+```
+
+选择后按提示完成配置，配置会自动写入 `config.json`，然后 Bridge 直接启动。
+
+### 3. 使用配置文件启动
+
+也可以提前准备配置文件：
 
 ```bash
 cp config.example.json config.json
+# 编辑 config.json 填写你的凭证
+./bin/bridge-linux-amd64 -config config.json
 ```
-
-最少需要填写：
-- `lark.app_id` / `lark.app_secret`：在[飞书开放平台](https://open.feishu.cn/app)创建企业自建应用获取
-- `squad.workspace`：本地 squad workspace 目录路径（需提前存在）
-
-完整配置说明见 [config-guide.md](config-guide.md)。
 
 **环境变量覆盖（推荐用于凭证）：**
 ```bash
 export LARK_APP_ID="cli_xxx"
 export LARK_APP_SECRET="xxx"
-export SQUAD_WORKSPACE="/home/user/squad"
+export WEIXIN_BOT_TOKEN="xxx"
+export WECOM_CORP_ID="xxx"
+export WECOM_CORP_SECRET="xxx"
 ```
-
-### 3. 启动
-
-```bash
-# Linux / macOS
-./bin/bridge-linux-amd64 -config config.json
-
-# Windows
-.\bin\bridge-windows-amd64.exe -config config.json
-```
-
-首次启动会自动：
-1. 初始化 squad workspace
-2. 写入角色模板到 `.squad/roles/`
-3. 创建 tmux sessions 并启动 Claude Code Agent
-4. 连接飞书事件总线，开始接收消息
 
 ### 4. 使用
 
-在飞书中找到你的机器人，发送消息即可开始对话。
+在对应 IM 中找到你的机器人，发送消息即可开始对话。
 
 | 命令 | 说明 |
 |------|------|
@@ -82,6 +88,15 @@ export SQUAD_WORKSPACE="/home/user/squad"
 | `/task "标题" "内容"` | 发送正式 squad 任务 |
 | `/approve {id}` | 批准危险命令 |
 | `/reject {id}` | 拒绝危险命令并中断 Agent |
+
+## CLI 命令
+
+| 命令 | 说明 |
+|------|------|
+| `./bridge` | 正常启动 Bridge（无配置时进入交互式向导） |
+| `./bridge -config=config.json` | 指定配置文件启动 |
+| `./bridge weixin-login` | 单独执行微信扫码登录 |
+| `./bridge channels` | 通道管理（查看/添加/清除通道） |
 
 ## 核心交互示例
 
@@ -132,8 +147,10 @@ GOOS=windows GOARCH=amd64 go build -o ../bin/bridge-windows-amd64.exe ./cmd/brid
 - **Go 1.23**：Bridge 服务主语言
 - **squad**：Rust 编写的本地多 Agent 协作 CLI
 - **Claude Code**：Anthropic 终端 AI 编程助手（Node.js）
-- **lark-cli**：飞书官方 CLI（Node.js），Bridge 通过调用它与飞书交互
+- **lark-cli**：飞书官方 CLI（Node.js），仅飞书通道使用
 - **tmux**：Agent 运行容器，保持 Claude Code 在后台持续运行
+- **iLink 协议**：腾讯非官方个人微信 Bot 协议（`ilinkai.weixin.qq.com`）
+- **企微官方 API**：企业微信 REST API + 回调消息加解密
 
 ## 文档索引
 
@@ -143,7 +160,7 @@ GOOS=windows GOARCH=amd64 go build -o ../bin/bridge-windows-amd64.exe ./cmd/brid
 
 - 所有凭证通过环境变量注入，不硬编码
 - 输出自动脱敏（API Key、Token、内网 IP）
-- 危险命令触发飞书审批，用户确认后才执行
+- 危险命令触发 IM 审批，用户确认后才执行
 - 审计日志记录所有消息发送、Agent 切换、审批决议
 
 ## License

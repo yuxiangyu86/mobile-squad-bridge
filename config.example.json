@@ -46,6 +46,24 @@
     "max_task_timeout_min": 30,
     "dangerous_commands": ["rm -rf /", "sudo", "DROP TABLE"]
   },
+  "weixin": {
+    "enabled": false,
+    "base_url": "https://ilinkai.weixin.qq.com",
+    "bot_token": "",
+    "auto_reply": true,
+    "poll_interval_ms": 5000,
+    "long_poll_timeout_ms": 35000
+  },
+  "wecom": {
+    "enabled": false,
+    "corp_id": "",
+    "corp_secret": "",
+    "agent_id": "",
+    "token": "",
+    "encoding_aes_key": "",
+    "callback_path": "/wecom/callback",
+    "auto_reply": true
+  },
   "log": {
     "level": "info",
     "format": "json",
